@@ -25,8 +25,10 @@ services:
   n8n:
     image: docker.n8n.io/n8nio/n8n
     restart: always
-    ports:
-      - "127.0.0.1:5678:5678"
+    # Tip: you can omit this port mapping; Traefik routes traffic via port 443.
+    # If you keep it, binding to 127.0.0.1 is fine.
+    # ports:
+    #   - "127.0.0.1:5678:5678"
     labels:
       - traefik.enable=true
       - traefik.http.routers.n8n.rule=Host(`${SUBDOMAIN:+${SUBDOMAIN}.}${DOMAIN_NAME}`)
