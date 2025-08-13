@@ -1,17 +1,76 @@
+version: "3.9"
+
 services:
+  certgen:
+    image: alpine:3.20
+    restart: "no"
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME}
+      - SUBDOMAIN=${SUBDOMAIN}
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+
+        echo "Installing OpenSSL..."
+        apk add --no-cache openssl >/dev/null
+
+        if [ -f /certs/server.pem ] && [ -f /certs/server-key.pem ]; then
+          echo "Certificates already exist, not generating new ones."
+          exit 0
+        fi
+
+        echo "# Attempt 1: Modern OpenSSL with \`-addext\`"
+        if openssl req -x509 -nodes -newkey rsa:2048 -days 825 \
+          -subj "/CN=${SUBDOMAIN:+$SUBDOMAIN.}${DOMAIN_NAME:-localhost}" \
+          -addext "subjectAltName=DNS:${SUBDOMAIN:+$SUBDOMAIN.}${DOMAIN_NAME:-localhost}" \
+          -keyout /certs/server-key.pem -out /certs/server.pem 2>/dev/null; then
+          echo "Certificates generated successfully."
+          exit 0
+        fi
+
+        echo "# Attempt 2 (fallback): using config file with SAN"
+        cat >/tmp/openssl.cnf <<EOF
+        [req]
+        distinguished_name=req_distinguished_name
+        x509_extensions=v3_req
+        prompt=no
+
+        [req_distinguished_name]
+        CN=${SUBDOMAIN:+$SUBDOMAIN.}${DOMAIN_NAME:-localhost}
+
+        [v3_req]
+        subjectAltName=DNS:${SUBDOMAIN:+$SUBDOMAIN.}${DOMAIN_NAME:-localhost}
+        EOF
+
+        openssl req -x509 -nodes -newkey rsa:2048 -days 825 \
+          -config /tmp/openssl.cnf -extensions v3_req \
+          -keyout /certs/server-key.pem -out /certs/server.pem
+
+        echo "Certificates generated successfully using config file."
+    volumes:
+      - certs:/certs
+
   traefik:
     image: traefik
     restart: always
+    depends_on:
+      certgen:
+        condition: service_completed_successfully
     command:
       - "--api=true"
       # Recommended: disable in production or protect it
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      # File provider to load the self-signed certificate (harmless in production)
+      - "--providers.file.filename=/etc/traefik/dynamic.yml"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.websecure.address=:443"
+      # ACME (Let’s Encrypt) always enabled; only used if the router requests it
       - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
       - "--certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}"
       - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
@@ -21,6 +80,8 @@ services:
     volumes:
       - traefik_data:/letsencrypt
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik_dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - certs:/certs:ro
 
   n8n:
     image: docker.n8n.io/n8nio/n8n
@@ -31,26 +92,27 @@ services:
     #   - "127.0.0.1:5678:5678"
     labels:
       - traefik.enable=true
-      - traefik.http.routers.n8n.rule=Host(`${SUBDOMAIN:+${SUBDOMAIN}.}${DOMAIN_NAME}`)
+      - traefik.http.routers.n8n.rule=Host(`${SUBDOMAIN:+${SUBDOMAIN}.}${DOMAIN_NAME:-localhost}`)
       - traefik.http.routers.n8n.tls=true
       - traefik.http.routers.n8n.entrypoints=web,websecure
-      - traefik.http.routers.n8n.tls.certresolver=mytlschallenge
-      # Security middlewares
+      # This line is injected from .env; empty in local, active in production
+      - ${ACME_LABEL}
+      # Optional security headers
       - traefik.http.middlewares.n8n.headers.SSLRedirect=true
       - traefik.http.middlewares.n8n.headers.STSSeconds=315360000
       - traefik.http.middlewares.n8n.headers.browserXSSFilter=true
       - traefik.http.middlewares.n8n.headers.contentTypeNosniff=true
       - traefik.http.middlewares.n8n.headers.forceSTSHeader=true
-      - traefik.http.middlewares.n8n.headers.SSLHost=${DOMAIN_NAME}
+      - traefik.http.middlewares.n8n.headers.SSLHost=${DOMAIN_NAME:-localhost}
       - traefik.http.middlewares.n8n.headers.STSIncludeSubdomains=true
       - traefik.http.middlewares.n8n.headers.STSPreload=true
       - traefik.http.routers.n8n.middlewares=n8n@docker
     environment:
-      - N8N_HOST=${SUBDOMAIN:+${SUBDOMAIN}.}${DOMAIN_NAME}
+      - N8N_HOST=${SUBDOMAIN:+${SUBDOMAIN}.}${DOMAIN_NAME:-localhost}
       - N8N_PORT=5678
       - N8N_PROTOCOL=https
       - NODE_ENV=production
-      - WEBHOOK_URL=https://${SUBDOMAIN:+${SUBDOMAIN}.}${DOMAIN_NAME}/
+      - WEBHOOK_URL=https://${SUBDOMAIN:+${SUBDOMAIN}.}${DOMAIN_NAME:-localhost}/
       - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
       - N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
     volumes:
@@ -60,3 +122,4 @@ services:
 volumes:
   n8n_data:
   traefik_data:
+  certs:
