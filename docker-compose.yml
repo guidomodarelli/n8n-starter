@@ -115,6 +115,8 @@ services:
       - WEBHOOK_URL=https://${SUBDOMAIN:+${SUBDOMAIN}.}${DOMAIN_NAME:-localhost}/
       - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
       - N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_RUNNERS_ENABLED=true
     volumes:
       - n8n_data:/home/node/.n8n
       - ./local-files:/files
