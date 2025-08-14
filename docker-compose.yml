@@ -5,8 +5,7 @@ services:
     image: alpine:3.20
     restart: "no"
     environment:
-      - DOMAIN_NAME=${DOMAIN_NAME}
-      - SUBDOMAIN=${SUBDOMAIN}
+      - FQDN=${FQDN}
     command:
       - /bin/sh
       - -c
@@ -23,8 +22,8 @@ services:
 
         echo "# Attempt 1: Modern OpenSSL with \`-addext\`"
         if openssl req -x509 -nodes -newkey rsa:2048 -days 825 \
-          -subj "/CN=${SUBDOMAIN:+$SUBDOMAIN.}${DOMAIN_NAME:-localhost}" \
-          -addext "subjectAltName=DNS:${SUBDOMAIN:+$SUBDOMAIN.}${DOMAIN_NAME:-localhost}" \
+          -subj "/CN=${FQDN}" \
+          -addext "subjectAltName=DNS:${FQDN}" \
           -keyout /certs/server-key.pem -out /certs/server.pem 2>/dev/null; then
           echo "Certificates generated successfully."
           exit 0
@@ -38,10 +37,10 @@ services:
         prompt=no
 
         [req_distinguished_name]
-        CN=${SUBDOMAIN:+$SUBDOMAIN.}${DOMAIN_NAME:-localhost}
+        CN=${FQDN}
 
         [v3_req]
-        subjectAltName=DNS:${SUBDOMAIN:+$SUBDOMAIN.}${DOMAIN_NAME:-localhost}
+        subjectAltName=DNS:${FQDN}
         EOF
 
         openssl req -x509 -nodes -newkey rsa:2048 -days 825 \
