@@ -1,0 +1,24 @@
+http:
+  routers:
+    dokploy-router-app:
+      # rule: Host(`dokploy.docker.localhost`) && PathPrefix(`/`)
+      rule: Host(`beezflow.com`) # << CHANGE THIS
+      service: dokploy-service-app
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+
+    dokploy-router-app-https:
+      rule: Host(`beezflow.com`) # << CHANGE THIS
+      service: dokploy-service-app
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    dokploy-service-app:
+      loadBalancer:
+        servers:
+          - url: http://dokploy:3000
