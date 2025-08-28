@@ -28,7 +28,8 @@ binarios “del sistema” tipo `/usr/bin/dokploy`. En el host vas a ver **confi
 
 ### ¿Dónde están binarios, configuración y logs?
 
-* **Binarios**: no hay binarios instalados en el host; la app es la imagen `dokploy/dokploy` corriendo como servicio de Swarm, y Traefik/Redis/Postgres son contenedores. ([docs.dokploy.com][3])
+* **Binarios**: no hay binarios instalados en el host; la app es la imagen `dokploy/dokploy` corriendo como servicio de
+  Swarm, y Traefik/Redis/Postgres son contenedores. ([docs.dokploy.com][3])
 * **Configuración (host)**:
 
   * Carpeta raíz: `/etc/dokploy` (se crea en la instalación y se monta al contenedor principal). ([docs.dokploy.com][3])
@@ -59,12 +60,15 @@ binarios “del sistema” tipo `/usr/bin/dokploy`. En el host vas a ver **confi
 
 ### ¿Dokploy también se ubica bajo `/etc/dokploy`?
 
-Sí. Esa carpeta es **el** punto de montaje que usa Dokploy; dentro vas a encontrar el subárbol de Traefik y cualquier archivo que Dokploy escriba allí. (Tu ruta de Traefik es la correcta). ([docs.dokploy.com][3])
+Sí. Esa carpeta es **el** punto de montaje que usa Dokploy; dentro vas a encontrar el subárbol de Traefik y cualquier
+archivo que Dokploy escriba allí. (Tu ruta de Traefik es la correcta). ([docs.dokploy.com][3])
 
 ### ¿Cómo fue la instalación “automática” y cómo reproducirla?
 
 * Hostinger entrega un VPS con Dokploy **preinstalado** y accesible en `http://IP:3000`. ([support.hostinger.com][1])
-* Debajo de eso, utilizan (o equivalen a) **el instalador oficial**, que básicamente hace esto: instala Docker si falta, **inicializa Swarm**, crea `/etc/dokploy`, levanta los servicios y **arranca Traefik** con los binds a esa carpeta. Para reproducirlo en cualquier Ubuntu limpio:
+* Debajo de eso, utilizan (o equivalen a) **el instalador oficial**, que básicamente hace esto: instala Docker si falta,
+  **inicializa Swarm**, crea `/etc/dokploy`, levanta los servicios y **arranca Traefik** con los binds a esa carpeta.
+  Para reproducirlo en cualquier Ubuntu limpio:
 
   ```bash
   curl -sSL https://dokploy.com/install.sh | sh
