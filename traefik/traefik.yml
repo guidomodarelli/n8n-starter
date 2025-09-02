@@ -1,3 +1,11 @@
+# Static Traefik config.
+# Tip: you can override any of these via env vars:
+#   - TRAEFIK_PROVIDERS_FILE_DIRECTORY (replaces providers.file.directory)
+#   - TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL (ACME email)
+#   - TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_STORAGE (path to acme.json)
+# Example with Docker/Compose: set those under `environment:` for the Traefik service.
+# see https://doc.traefik.io/traefik/reference/static-configuration/env-ref/ for more details.
+
 providers:
   swarm:
     exposedByDefault: false
@@ -7,7 +15,7 @@ providers:
     watch: true
     network: dokploy-network
   file:
-    directory: /etc/dokploy/traefik/dynamic  # << CHANGE THIS
+    directory: /etc/dokploy/traefik/dynamic  # Override via env: TRAEFIK_PROVIDERS_FILE_DIRECTORY
     watch: true
 entryPoints:
   traefik:
@@ -31,7 +39,7 @@ api:
 certificatesResolvers:
   letsencrypt:
     acme:
-      email: example@gmail.com  # << CHANGE THIS
-      storage: /etc/dokploy/traefik/dynamic/acme.json  # << CHANGE THIS
+      email: example@gmail.com  # Override via env: TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL
+      storage: /etc/dokploy/traefik/dynamic/acme.json  # Override via env: TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_STORAGE
       httpChallenge:
         entryPoint: web
