@@ -2,7 +2,7 @@ http:
   routers:
     dokploy-router-app:
       # rule: Host(`dokploy.docker.localhost`) && PathPrefix(`/`)
-      rule: Host(`beezflow.com`) # << CHANGE THIS
+      rule: &hostrule Host(`example.com`) # << CHANGE THIS
       service: dokploy-service-app
       entryPoints:
         - web
@@ -10,7 +10,7 @@ http:
         - redirect-to-https
 
     dokploy-router-app-https:
-      rule: Host(`beezflow.com`) # << CHANGE THIS
+      rule: *hostrule
       service: dokploy-service-app
       entryPoints:
         - websecure
